@@ -112,11 +112,15 @@ while progressStatus != "complete" and progressStatus != "failed":
     # Step 3: Downloading file
         requestDownloadUrl = baseUrl + fileId + '/file'
         requestDownload = requests.request("GET", requestDownloadUrl, headers=headers, stream=True)
-
+        data = requestDownload.content
+        df = pd.read_csv(io.BytesIO(data), encoding='unicode_escape')
+        #df = pd.read_csv(requestDownload.content, encoding='unicode_escape')
 
     # Step 4: Unzipping the file
         zipfile.ZipFile(io.BytesIO(requestDownload.content)).extractall("MyQualtricsDownload")
         print('Complete')
 
-        data = requestDownload.content
-        df = pd.read_csv((io.BytesIO(requestDownload.content)))
+        #data = requestDownload.content
+        #df = pd.read_csv((io.BytesIO(requestDownload.content)))
+        #df = pd.read_csv("/Users/jcooke/PycharmProjects/qualtrics/MyQualtricsDownload/NuSkin.com Feedback Tab v5.1.csv", encoding= 'unicode_escape')
+        #print(df.describe())
