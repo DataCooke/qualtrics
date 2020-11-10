@@ -5,8 +5,9 @@ import io
 import base64
 import json
 import requests
+from pandas.io.json import json_normalize
 import pandas as pd
-
+import chardet
 clientID = os.getenv('clientID')
 clientsecret = os.getenv('clientsecret')
 
@@ -78,8 +79,8 @@ headers = {
 body = {
   "format": "csv",
   "filterId": "9ea61539-3cf9-4fa0-86e5-9e01ee19fc36",
-  "startDate": "2020-08-01T00:00:00-07:00",
-  "endDate": "2020-09-01T00:00:00-07:00"
+  "startDate": "2018-01-01T00:00:00-07:00",
+  "endDate": "2020-09-27T00:00:00-07:00"
 }
 
 downloadRequestResponse = requests.request("POST", baseUrl, headers=headers, json=body)
@@ -113,14 +114,44 @@ while progressStatus != "complete" and progressStatus != "failed":
         requestDownloadUrl = baseUrl + fileId + '/file'
         requestDownload = requests.request("GET", requestDownloadUrl, headers=headers, stream=True)
         data = requestDownload.content
-        df = pd.read_csv(io.BytesIO(data), encoding='unicode_escape')
+        #print(dir(requestDownload))
+       # print(requestDownload.content)
+        #print(pd.json_normalize(data))
+       # df = pd.DataFrame(data)
+        #data1 = pd.read_csv(data, encoding='gzip')
+       # print(data1)
+       # data1 =data.decode('utf-16').strip()
+       # print(vars(requestDownload))
+        #data1 = io.open(data, encoding='utf-16', errors="ignore")
+        #print(type(io.BytesIO(data)))
+        #rawData = pd.read_csv(io.StringIO(data.decode('utf-8', errors="ignore")))
+        #df = pd.read_csv(data.decode("utf-16", errors="replace"), sep="\t")
+        #df = pd.read_json(data.decode("utf-16", errors="ignore"))
+       # df = pd.read_csv(data, sep="\t", encoding="utf-16", header=[0,1])
         #df = pd.read_csv(requestDownload.content, encoding='unicode_escape')
 
     # Step 4: Unzipping the file
-        zipfile.ZipFile(io.BytesIO(requestDownload.content)).extractall("MyQualtricsDownload")
+        data1 = zipfile.ZipFile(io.BytesIO(requestDownload.content)).extractall("MyQualtricsDownload")
+        use_cols = [
+            0, 1, 4, 5, 6
+            , 7, 8, 15, 16, 17
+            , 18, 19, 20, 24, 25
+            , 26, 27, 28, 29, 30
+            , 31, 32, 33, 34, 35
+            , 37, 38, 39, 40, 41
+            , 42, 43, 44, 45, 46
+            , 47, 48, 49, 50, 51
+            , 52, 53, 54, 55, 56
+            , 57, 58, 59, 60, 61
+            , 62, 63, 64, 67, 68
+            , 69, 70, 71, 72, 73
+        ]
+        #use_cols = ["StartDate", "EndDate", "UserLanguage"]
+        df=pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/MyQualtricsDownload/NuSkin.com Feedback Tab v5.1.csv', usecols=use_cols)
+        print(df.head())
         print('Complete')
 
         #data = requestDownload.content
         #df = pd.read_csv((io.BytesIO(requestDownload.content)))
-        #df = pd.read_csv("/Users/jcooke/PycharmProjects/qualtrics/MyQualtricsDownload/NuSkin.com Feedback Tab v5.1.csv", encoding= 'unicode_escape')
+        #df = pd.read_csv("/Users/jcooke/PycharmProjects/qualtrics/MyQualtricsDownload/NuSkin.com Feedback Tab v5.1.tsv", encoding= 'utf-16')
         #print(df.describe())
