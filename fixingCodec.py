@@ -19,6 +19,39 @@ from nltk import sent_tokenize
 from nltk import word_tokenize
 from google.cloud import bigquery
 
+df=pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/MyQualtricsDownload/NuSkin.com Feedback Tab v5.1.csv')
+df.columns = df.iloc[1]
+df = df.drop([0,1])
+df = df.reset_index(drop=True)
+
+df = df.applymap(str)
+
+df = df.replace('nan', '')
+
+df1 = df[['{\"ImportId\":\"startDate\",\"timeZone\":\"Z\"}', '{\"ImportId\":\"_recordId\"}', '{\"ImportId\":\"QID29_TEXT_TRANSLATEDeneqqpuqm\"}', '{\"ImportId\":\"QID3_TEXT_TRANSLATEDenayfj8yo\"}', '{\"ImportId\":\"QID83_TEXT_TRANSLATEDeneh72e33\"}']]
+
+#df["q29TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[44]), axis=1)
+#df{"ImportId":"QID29_TEXT_TRANSLATEDeneqqpuqm"}
+print('yoooooooooo')
+print(df1.columns)
+print(df1.iloc[1])
+
+df1["q29TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[2]), axis=1)
+df1["q3TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[3]), axis=1)
+df1["q83TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[4]), axis=1)
+print(df1.iloc[:,[2,3,4]])
+
+q29Text = ''.join(df1.iloc[:,2].tolist())
+q3Text = ''.join(df1.iloc[:,3].tolist())
+q83Text = ''.join(df1.iloc[:,4].tolist())
+
+#df = df.rename(index = lambda x: x + 1)
+print('headers')
+print(df1.columns)
+print(df1.head())
+
+### stuff for testing
+'''
 train = [("Great place to be when you are in Bangalore.", "pos"),
   ("The place was being renovated when I visited so the seating was limited.", "neg"),
   ("Loved the ambience, loved the food", "pos"),
@@ -46,8 +79,11 @@ test_data = "Manchurian was hot and spicy"
 test_data_features = {word.lower(): (word in word_tokenize(test_data.lower())) for word in dictionary}
 
 #print(classifier.classify(test_data_features))
+'''
+### end stuff for testing
 
-
+## original header processing
+'''
 
 use_cols = [
             0, 1, 4, 5, 6
@@ -65,6 +101,7 @@ use_cols = [
         ]
 
 df=pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/MyQualtricsDownload/NuSkin.com Feedback Tab v5.1.csv', usecols=use_cols)
+print(df.columns)
 
 df.columns = [
     'startDate','endDate','progress','duration','finished'
@@ -84,9 +121,11 @@ df.columns = [
 dfOrigHeaders = df[0:2]
 df = df.drop([0,1,2])
 #print(df.head())
+print("head 44")
+print(df.iloc[:,[59]])
 
-#for col in df.columns:
- #   print(col)
+for col in df.columns:
+    print(col)
 #print('Complete')
 df = df.applymap(str)
 #df = df.to_string()
@@ -101,10 +140,16 @@ df = df.replace('nan', '')
 df["q29TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[44]), axis=1)
 df["q3TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[58]), axis=1)
 df["q83TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[59]), axis=1)
+print(df.iloc[:,[44,58,59]])
 
 q29Text = ''.join(df.iloc[:,44].tolist())
 q3Text = ''.join(df.iloc[:,58].tolist())
 q83Text = ''.join(df.iloc[:,59].tolist())
+
+'''
+### end original header processing
+
+
 
 # Processing data for q29 word analysis
 q29TextTokenized = word_tokenize(q29Text)
@@ -146,7 +191,7 @@ print(q83TextTokenized)
 #print(FreqDist(q83TextTokenized).most_common(30))
 
 #processing sentence tokens Q29
-q29Sent = df.iloc[:, [0,6,44]]
+q29Sent = df1.iloc[:, [0,1,2]]
 
 sentences = []
 for row in q29Sent.itertuples():
@@ -158,7 +203,7 @@ q29Sent_DF["question"] = "q29"
 
 
 #processing sentence for q3
-q3Sent = df.iloc[:, [0,6,58]]
+q3Sent = df1.iloc[:, [0,1,3]]
 
 sentences = []
 for row in q3Sent.itertuples():
@@ -168,7 +213,7 @@ q3Sent_DF = pd.DataFrame(sentences, columns=['start_date', 'responseID', 'senten
 q3Sent_DF["question"] = "q3"
 
 #processing sentence for q83
-q83Sent = df.iloc[:, [0,6,59]]
+q83Sent = df1.iloc[:, [0,1,4]]
 
 sentences = []
 for row in q83Sent.itertuples():
@@ -188,11 +233,22 @@ all_dfs = pd.concat(all_dfs).reset_index(drop=True)
 all_dfs.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/all_dfs.csv')
 #create training set
 
-train = pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/train.csv')
+training = pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/trainTest.csv')
+training = training.loc[:, ~training.columns.str.contains('^Unnamed')]
+print("training")
+print(list(training.columns))
+print(training)
+
+train = training.sample(frac = .8, random_state = 115)
+test = training.drop(train.index)
 
 
 #train = all_dfs.sample(frac = .5)
-test = all_dfs.sample(frac = .5)
+#test = train.sample(frac = .5)
+print("train")
+print(train)
+print("test")
+print(test)
 
 
 
@@ -205,7 +261,7 @@ test = all_dfs.sample(frac = .5)
 #print("test is: " + test)
 
 train = pd.DataFrame(train)
-train = train.reset_index()
+train = train.reset_index(drop=True)
 stop_words = set(stopwords.words('english'))
 train['sentence'] = train['sentence'].str.replace("[^\w\s]", "").str.lower()
 
@@ -222,7 +278,7 @@ def lemmatize_text(text):
     return [lemmatizer.lemmatize(w) for w in w_tokenizer.tokenize(text) ]
 
 train['sentenceLemmatized'] = train.sentence.apply(lemmatize_text)
-print('lemmatize test')
+print('lemmatize train')
 print(train)
 print(train['sentence'])
 print('lemmatized sentences')
@@ -247,7 +303,9 @@ print(train['sentence'])'''
 #train['sentence'] = [lemmatizer.lemmatize(word) for word in train['sentence']]
 
 train = pd.DataFrame(train)
-train = train.reset_index()
+#print("train again")
+#print(train)
+#train = train.reset_index()
 #train.reset_index(drop=True, inplace=True)
 
 #train['sentenceLemmatized'] = train['sentenceLemmatized'].map(lambda x: x.str.strip(','))
@@ -258,10 +316,41 @@ train['sentenceLemmatized'] = train['sentenceLemmatized'].str.replace(',', ' ')
 #train['sentenceLemmatized'] = train['sentenceLemmatized'].replace(",", " ")
 print(train)
 train = train[['sentenceLemmatized', 'sentiment']].apply(tuple, axis=1)
-test = test.iloc[:, [2]]
-test = test.values.tolist()
+
+## process test
+
+test = pd.DataFrame(test)
+test = test.reset_index(drop=True)
+stop_words = set(stopwords.words('english'))
+test['sentence'] = test['sentence'].str.replace("[^\w\s]", "").str.lower()
+test['sentence'] = test['sentence'].apply(lambda x: ' '.join([item for item in x.split() if item not in stop_words]))
+test['sentenceLemmatized'] = test.sentence.apply(lemmatize_text)
+test = pd.DataFrame(test)
+test['sentenceLemmatized'] = [','.join(map(str, l)) for l in test['sentenceLemmatized']]
+test['sentenceLemmatized'] = test['sentenceLemmatized'].str.replace(',', ' ')
+test = test[['sentenceLemmatized', 'sentiment']].apply(tuple, axis=1)
+
+dictionaryTest = set(word.lower() for passage in test for word in word_tokenize(passage[0]))
+print("dictionary test")
+print(dictionaryTest)
+
+print('Test')
+print(type(test))
+print(test)
+#for x in test:
+ #   " ".join(test)
+tTest = [({word: (word in word_tokenize(x[0])) for word in dictionaryTest}, x[1]) for x in test]
+
+### end process test
+
+
+#not sure if needed
+###test = test.iloc[:, [2]]
+###test = test.values.tolist()
 #test = test.str.lower()
 #test = "Brian is the best boss in nuskin dont right small first algebra amazing necessary understand"
+# end not sure if needed
+
 
 print("last")
 print(train)
@@ -281,7 +370,7 @@ t = [({word: (word in word_tokenize(x[0])) for word in dictionary}, x[1]) for x 
 classifier = nltk.NaiveBayesClassifier.train(t)
 
 #added trying to check classifier accuracy
-print("Naive Bayes Algo Accuracy Percent:", (classify.accuracy(classifier, testing_set))*100)
+print("Naive Bayes Algo Accuracy Percent:", (nltk.classify.accuracy(classifier, tTest))*100)
 
 #for x in test:
  #   word_tokenize(x) for word in dictionary

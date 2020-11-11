@@ -80,7 +80,7 @@ body = {
   "format": "csv",
   "filterId": "9ea61539-3cf9-4fa0-86e5-9e01ee19fc36",
   "startDate": "2018-01-01T00:00:00-07:00",
-  "endDate": "2020-09-27T00:00:00-07:00"
+  "endDate": "2020-11-10T00:00:00-07:00"
 }
 
 downloadRequestResponse = requests.request("POST", baseUrl, headers=headers, json=body)
