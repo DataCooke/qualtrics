@@ -284,13 +284,13 @@ all_dfs = pd.concat(all_dfs).reset_index(drop=True)
 all_dfs.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/all_dfs2.csv')
 #create training set
 
-training = pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/trainTest.csv')
+training = pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/all_dfs22.csv')
 training = training.loc[:, ~training.columns.str.contains('^Unnamed')]
 print("training")
 print(list(training.columns))
 print(training)
 
-train = training.sample(frac = .8, random_state = 106)
+train = training.sample(frac = .8, random_state = 156)
 test = training.drop(train.index)
 
 
