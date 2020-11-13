@@ -194,10 +194,50 @@ print('another test to see stuff')
 print(q83TextTokenized)
 #print(FreqDist(q83TextTokenized).most_common(30))
 
-#processing sentence tokens Q29
-q29Sent = df1.iloc[:, [0,1,2]]
-q29Sent.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/q29Sent.csv')
+# process data without tokenizing the sentences
+q29 = df1.iloc[:, [0,1,2]]
+q29 = pd.DataFrame(q29)
+q29 = q29.rename(columns={
+    '{\"ImportId\":\"startDate\",\"timeZone\":\"Z\"}':'start_date'
+    , '{\"ImportId\":\"_recordId\"}':'responseID'
+    , '{\"ImportId\":\"QID29_TEXT_TRANSLATEDeneqqpuqm\"}':'sentence'
+})
+q29['sentence'] = q29['sentence'].str.strip()
+q29['sentence'].replace('', np.nan, inplace=True)
+q29 = q29.dropna(axis=0, subset=['sentence'])
+q29.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/q29.csv')
+q29["question"] = "q29"
 
+q3 = df1.iloc[:, [0,1,3]]
+q3 = pd.DataFrame(q3)
+q3 = q3.rename(columns={
+    '{\"ImportId\":\"startDate\",\"timeZone\":\"Z\"}':'start_date'
+    , '{\"ImportId\":\"_recordId\"}':'responseID'
+    , '{\"ImportId\":\"QID3_TEXT_TRANSLATEDenayfj8yo\"}':'sentence'
+})
+
+q3['sentence'] = q3['sentence'].str.strip()
+q3['sentence'].replace('', np.nan, inplace=True)
+q3 = q3.dropna(axis=0, subset=['sentence'])
+q3.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/q3.csv')
+q3["question"] = "q3"
+
+q83 = df1.iloc[:, [0,1,4]]
+q83 = pd.DataFrame(q83)
+q83 = q83.rename(columns={
+    '{\"ImportId\":\"startDate\",\"timeZone\":\"Z\"}':'start_date'
+    , '{\"ImportId\":\"_recordId\"}':'responseID'
+    , '{\"ImportId\":\"QID83_TEXT_TRANSLATEDeneh72e33\"}':'sentence'
+})
+
+q83['sentence'] = q83['sentence'].str.strip()
+q83['sentence'].replace('', np.nan, inplace=True)
+q83 = q83.dropna(axis=0, subset=['sentence'])
+q83.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/q83.csv')
+q83["question"] = "q83"
+
+######processing sentence tokens Q29
+'''
 sentences = []
 for row in q29Sent.itertuples():
     for sentence in sent_tokenize(row[3]):
@@ -231,16 +271,17 @@ print("Q29 sent DF")
 print(q29Sent_DF)
 q29Sent_DF.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/q29Sent_df.csv')
 
+'''
 
 # stack all dataframes on one another
 
-all_dfs = [q29Sent_DF, q3Sent_DF, q83Sent_DF]
+all_dfs = [q29, q3, q83]
 
 for df in all_dfs:
     df.columns = ["start_date", "responseID", "sentence", "question"]
 all_dfs = pd.concat(all_dfs).reset_index(drop=True)
 
-all_dfs.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/all_dfs.csv')
+all_dfs.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/all_dfs2.csv')
 #create training set
 
 training = pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/trainTest.csv')
