@@ -18,6 +18,7 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from nltk import sent_tokenize
 from nltk import word_tokenize
 from google.cloud import bigquery
+import pickle
 
 df=pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/MyQualtricsDownload/NuSkin.com Feedback Tab v5.1.csv')
 df.columns = df.iloc[1]
@@ -32,26 +33,20 @@ df1 = df[['{\"ImportId\":\"startDate\",\"timeZone\":\"Z\"}', '{\"ImportId\":\"_r
 
 #df["q29TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[44]), axis=1)
 #df{"ImportId":"QID29_TEXT_TRANSLATEDeneqqpuqm"}
-print('yoooooooooo')
-print(df1.columns)
-print(df1.iloc[1])
+
 
 
 df1["q29TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[2]), axis=1)
 df1["q3TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[3]), axis=1)
 df1["q83TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[4]), axis=1)
-print(df1.iloc[:,[2,3,4]])
+
 
 q29Text = ''.join(df1.iloc[:,2].tolist())
 q3Text = ''.join(df1.iloc[:,3].tolist())
 q83Text = ''.join(df1.iloc[:,4].tolist())
 
 #df = df.rename(index = lambda x: x + 1)
-print('headers')
-print(df1.columns)
-print(df1.head())
-print('data')
-print(df1.iloc[:4])
+
 
 
 ### stuff for testing
@@ -172,9 +167,7 @@ stop_words = set(stopwords.words('english'))
 q3TextTokenized = [w for w in q3TextTokenized if not w in stop_words]
 q3TextTokenized = [i for i in q3TextTokenized if len(i) > 1]
 lemmatizer = WordNetLemmatizer()
-print("q3texttokenized type is:")
-print(type(q3TextTokenized))
-print(q3TextTokenized)
+
 q3TextTokenized = [lemmatizer.lemmatize(word) for word in q3TextTokenized]
 #print(FreqDist(q3TextTokenized).most_common(30))
 
@@ -186,12 +179,10 @@ q83TextTokenized = [word for word in q83TextTokenized if word.isalpha()]
 stop_words = set(stopwords.words('english'))
 q83TextTokenized = [w for w in q83TextTokenized if not w in stop_words]
 q83TextTokenized = [i for i in q83TextTokenized if len(i) > 1]
-print('test to see stuff')
-print(q83TextTokenized)
+
 lemmatizer = WordNetLemmatizer()
 q83TextTokenized = [lemmatizer.lemmatize(word) for word in q83TextTokenized]
-print('another test to see stuff')
-print(q83TextTokenized)
+
 #print(FreqDist(q83TextTokenized).most_common(30))
 
 # process data without tokenizing the sentences
@@ -286,91 +277,32 @@ all_dfs.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/all_dfs2.csv')
 
 training = pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/all_dfs22.csv')
 training = training.loc[:, ~training.columns.str.contains('^Unnamed')]
-print("training")
-print(list(training.columns))
-print(training)
 
-train = training.sample(frac = .8, random_state = 156)
+
+train = training.sample(frac = .8, random_state = 164)
 test = training.drop(train.index)
-
-
-#train = all_dfs.sample(frac = .5)
-#test = train.sample(frac = .5)
-print("train")
-print(train)
-print("test")
-print(test)
-
-
-
-#test = test.values.tolist()
-#train.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/train.csv')
-#test.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/test.csv')
-
-
-#test = "the website was hard to use"
-#print("test is: " + test)
 
 train = pd.DataFrame(train)
 train = train.reset_index(drop=True)
 stop_words = set(stopwords.words('english'))
 train['sentence'] = train['sentence'].str.replace("[^\w\s]", "").str.lower()
-
 train['sentence'] = train['sentence'].apply(lambda x: ' '.join([item for item in x.split() if item not in stop_words]))
-print("print train")
-print(train)
-print("print train sentence after stop word")
-print(train['sentence'])
-
-
 w_tokenizer = nltk.tokenize.WhitespaceTokenizer()
 lemmatizer = WordNetLemmatizer()
+
 def lemmatize_text(text):
     return [lemmatizer.lemmatize(w) for w in w_tokenizer.tokenize(text) ]
 
 train['sentenceLemmatized'] = train.sentence.apply(lemmatize_text)
-print('lemmatize train')
-print(train)
-print(train['sentence'])
-print('lemmatized sentences')
-print(train['sentenceLemmatized'])
-
-'''
-#train['sentence'] = [i for i in train['sentence'] if len(i) > 1]
-lemmatizer = WordNetLemmatizer()
-#def lemmantize_text(text):
- #   return [lemmatizer.lemmatize(w) for w in text]
-#train = pd.DataFrame(train)
-print("train sentence is:")
-print(train['sentence'])
-train = train[['sentence', 'sentiment']].apply(tuple, axis=1)
-#q83TextTokenized = [w for w in q83TextTokenized if not w in stop_words]
-#train = [ls for s in train
-train = [lemmatizer.lemmatize(word) for word in train]
-print("lemmatized sentence is: ")
-print(train['sentence'])'''
-
-#train['sentence'] = train['sentence'].apply(lambda x: [item for item in x.lemmantize])
-#train['sentence'] = [lemmatizer.lemmatize(word) for word in train['sentence']]
-
 train = pd.DataFrame(train)
-#print("train again")
-#print(train)
-#train = train.reset_index()
-#train.reset_index(drop=True, inplace=True)
-
-#train['sentenceLemmatized'] = train['sentenceLemmatized'].map(lambda x: x.str.strip(','))
-#print("omg")
-#print(train['sentenceLemmatized'])
 train['sentenceLemmatized'] = [','.join(map(str, l)) for l in train['sentenceLemmatized']]
 train['sentenceLemmatized'] = train['sentenceLemmatized'].str.replace(',', ' ')
-#train['sentenceLemmatized'] = train['sentenceLemmatized'].replace(",", " ")
-print(train)
 train = train[['sentenceLemmatized', 'sentiment']].apply(tuple, axis=1)
 
 ## process test
 
 test = pd.DataFrame(test)
+
 test = test.reset_index(drop=True)
 stop_words = set(stopwords.words('english'))
 test['sentence'] = test['sentence'].str.replace("[^\w\s]", "").str.lower()
@@ -380,18 +312,26 @@ test = pd.DataFrame(test)
 test['sentenceLemmatized'] = [','.join(map(str, l)) for l in test['sentenceLemmatized']]
 test['sentenceLemmatized'] = test['sentenceLemmatized'].str.replace(',', ' ')
 test = test[['sentenceLemmatized', 'sentiment']].apply(tuple, axis=1)
+testNonPairs = [(a) for a, b in test]
+print("this is test")
+print(test)
 
 dictionaryTest = set(word.lower() for passage in test for word in word_tokenize(passage[0]))
-print("dictionary test")
-print(dictionaryTest)
-
-print('Test')
-print(type(test))
-print(test)
+print("this is dictionaryTest")
+#print(dictionaryTest)
 #for x in test:
  #   " ".join(test)
-tTest = [({word: (word in word_tokenize(x[0])) for word in dictionaryTest}, x[1]) for x in test]
 
+
+#print(tTest)
+#print("directory")
+#print(dir(tTest))
+#print("tTest")
+#testNonPairs = [(a) for a, b in tTest]
+#print("test Non Pairs here")
+#print(testNonPairs)
+#print(type(tTest))
+#print(tTest[1])
 ### end process test
 
 
@@ -403,25 +343,81 @@ tTest = [({word: (word in word_tokenize(x[0])) for word in dictionaryTest}, x[1]
 # end not sure if needed
 
 
-print("last")
-print(train)
+
 
 
 #dictionary = word_tokenize(list(train['sentence']))
-dictionary = set(word.lower() for passage in train for word in word_tokenize(passage[0]))
-print("dictionary")
-print(dictionary)
 
-print('Test')
-print(type(test))
-print(test)
+
+
+testFeatures = []
+
 #for x in test:
  #   " ".join(test)
+dictionary = set(word.lower() for passage in train for word in word_tokenize(passage[0]))
+print("dictionary here")
+print(dictionary)
 t = [({word: (word in word_tokenize(x[0])) for word in dictionary}, x[1]) for x in train]
+
+tTest = [({word: (word in word_tokenize(x[0])) for word in dictionary}, x[1]) for x in test]
+print('tTest is below')
+print(tTest[:1])
 classifier = nltk.NaiveBayesClassifier.train(t)
+
 
 #added trying to check classifier accuracy
 print("Naive Bayes Algo Accuracy Percent:", (nltk.classify.accuracy(classifier, tTest))*100)
+
+
+
+#### sample
+sample = training.sample(frac = .1, random_state = 147)
+sample = pd.DataFrame(sample)
+sample = sample.reset_index(drop=True)
+sample['sentence'] = sample['sentence'].str.replace("[^\w\s]", "").str.lower()
+sample['sentence'] = sample['sentence'].apply(lambda x: ' '.join([item for item in x.split() if item not in stop_words]))
+sample['sentenceLemmatized'] = sample.sentence.apply(lemmatize_text)
+sample = pd.DataFrame(sample)
+sample['sentenceLemmatized'] = [','.join(map(str, l)) for l in sample['sentenceLemmatized']]
+sample['sentenceLemmatized'] = sample['sentenceLemmatized'].str.replace(',', ' ')
+sample = sample.drop(['sentiment'], axis=1)
+sample = sample[['sentenceLemmatized']].apply(tuple, axis=1)
+print("sample below")
+print(sample[:10])
+#print(list(sample.columns.values))
+print(sample.head())
+
+
+sampleFeatures = [({word: (word in word_tokenize(x[0])) for word in dictionary}) for x in sample]
+print("sampleFeatures")
+print(sampleFeatures[:1])
+print("sample classification below")
+sampleWords = "these are sample words to classify but we don't like cheese"
+print(classifier.classify_many(sampleFeatures))
+df['class']
+
+
+dictionarySample = set(word.lower() for passage in sample for word in word_tokenize(passage[0]))
+#dictionaryt = {word ()}
+dictionaryt = [({word: (word in word_tokenize(x[0])) for word in dictionarySample}, x[1]) for x in sample]
+test_sent_features = {word: (word in word_tokenize(test_sentence.lower())) for word in all_words}
+print('dictionary tttttttttt')
+print(dictionaryt[:10])
+
+
+
+print(classifier.classify(sampleFeatures))
+
+
+
+
+saved_model = pickle.dumps(classifier)
+
+naiveBayes = pickle.loads(saved_model)
+
+#print(naiveBayes.classify(tTest))
+
+
 
 #for x in test:
  #   word_tokenize(x) for word in dictionary
@@ -434,27 +430,27 @@ print("Naive Bayes Algo Accuracy Percent:", (nltk.classify.accuracy(classifier, 
 test = pd.DataFrame(test)
 #added below
 test = [word.lower() for word in test]
-print("test dataframe")
-print(test)
+#print("test dataframe")
+#print(test)
 #commented out below and added line below that then commented out
 #test = test[['sentenceLemmatized', 'sentiment']].apply(tuple, axis=1)
 test = test.apply(tuple, axis=1)
-print(dir(test))
+#print(dir(test))
 test_data_features = [word.lower() for word in test]
-print('lowercase')
-print(test_data_features)
+#print('lowercase')
+#print(test_data_features)
 test_data_features = [word_tokenize(word) for word in test]
-print('tokenized lower')
-print(test_data_features)
+#print('tokenized lower')
+#print(test_data_features)
 #test_data_features = {word.lower(): (word in word_tokenize(test.lower())) for word in dictionary}
 #test_data_features = [({word: (word in word_tokenize(x[0])) for word in dictionary}, x[1]) for x in test]
 #_data_features = {word: (word in word_tokenize(test)) for word in dictionary}
 #for x in test:
  #   print(classifier.classify(test))
-print("test_data_features")
-print(test_data_features)
-print('classifier result')
-print(classifier.classify(test_data_features))
+#print("test_data_features")
+#print(test_data_features)
+#print('classifier result')
+#print(classifier.classify(test_data_features))
 #t1 = test.classifier.classify()
 #print(t1)
 #print(classifier.classify_many(test))
