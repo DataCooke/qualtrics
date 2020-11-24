@@ -394,7 +394,14 @@ print(sampleFeatures[:1])
 print("sample classification below")
 sampleWords = "these are sample words to classify but we don't like cheese"
 print(classifier.classify_many(sampleFeatures))
-df['class']
+saved_model = pickle.dumps(classifier)
+pickle.dump(classifier, open("naiveBayesModel.p", "wb"))
+
+naiveBayes = pickle.load(open("naiveBayesModel.p", "rb"))
+results = (naiveBayes.classify_many(sampleFeatures))
+sampleDf = pd.DataFrame(sample)
+sampleDf['results'] = results
+sampleDf.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/sampleDf.csv')
 
 
 dictionarySample = set(word.lower() for passage in sample for word in word_tokenize(passage[0]))
