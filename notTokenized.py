@@ -268,6 +268,7 @@ q29Sent_DF.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/q29Sent_df.csv')
 
 all_dfs = [q29, q3, q83]
 
+
 for df in all_dfs:
     df.columns = ["start_date", "responseID", "sentence", "question"]
 all_dfs = pd.concat(all_dfs).reset_index(drop=True)
@@ -355,6 +356,8 @@ testFeatures = []
 #for x in test:
  #   " ".join(test)
 dictionary = set(word.lower() for passage in train for word in word_tokenize(passage[0]))
+dictExport = pd.DataFrame(dictionary)
+dictExport.to_csv("dictExport.csv")
 print("dictionary here")
 print(dictionary)
 t = [({word: (word in word_tokenize(x[0])) for word in dictionary}, x[1]) for x in train]
