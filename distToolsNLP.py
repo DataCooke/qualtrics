@@ -1,3 +1,7 @@
+#!/usr/bin/env python3.7
+import fastparquet
+import json
+import ndjson
 import http.client
 import zipfile
 import os
@@ -90,8 +94,10 @@ response = requests.request("GET", baseUrl, headers=headers)
 
 #end of test api call
 #added statics stuff
+
 requestCheckProgress = 0.0
 progressStatus = "inProgress"
+
 #end added stuff
 
 bearerToken = token # call the function defined in the previous code example
@@ -105,7 +111,7 @@ body = {
   "format": "csv",
   "filterId": "9ea61539-3cf9-4fa0-86e5-9e01ee19fc36",
   "startDate": "2020-11-11T00:00:00-07:00",
-  "endDate": "2020-11-24T00:00:00-07:00"
+  "endDate": "2020-12-02T00:00:00-07:00"
 }
 
 downloadRequestResponse = requests.request("POST", baseUrl, headers=headers, json=body)
@@ -143,9 +149,6 @@ while progressStatus != "complete" and progressStatus != "failed":
         request = zipfile.ZipFile(io.BytesIO(requestDownload.content))
         use_cols = ["StartDate", "ResponseId", "UserLanguage", "Q1_Browser", "Q1_Operating System", "CurrURL", "Where did we wander off track? Where did we have problems? What\ndid you lov... EN", "Shareyour thoughts. How's our website design? Would you like to see any ad... EN", "Please\n  describe the main reason for your visit: EN"]
         dataDf = pd.read_csv(request.open(request.namelist()[0]), usecols=use_cols)
-        #print("dataDf pandas dataframe below")
-        #print(dataDf)
-        #dataDf.to_csv('data.csv')
         print('*** DATA PULL COMPLETE ***')
 
 print(" ")
@@ -214,47 +217,302 @@ classifyData['sentenceLemmatized'] = [','.join(map(str, l)) for l in classifyDat
 classifyData['sentenceLemmatized'] = classifyData['sentenceLemmatized'].str.replace(',', ' ')
 classifyData = classifyData[['sentenceLemmatized']].apply(tuple, axis=1)
 
-#pull dictionary from google cloud storage
+
+### pull in dictionary from Google Cloud Storage
 
 from google.cloud import storage
 
 
-def download_blob(bucket_name, source_blob_name, destination_file_name):
+client = storage.Client()
+bucket = client.get_bucket("test_feedback_nlp")
+blob = bucket.get_blob(f"dictionary/dictExport.csv")
+if blob is not None and blob.exists(client):
+    bt = blob.download_as_string()
+else:
+    print("dict not read")
 
-    """Downloads a blob from the bucket."""
-    bucket_name = "test_feedback_nlp"
-    source_blob_name = "dictExport.csv"
-    destination_file_name = "https://console.cloud.google.com/storage/browser/test_feedback_nlp"
 
-    storage_client = storage.Client()
+from io import StringIO
 
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(source_blob_name)
-    blob.download_to_filename(destination_file_name)
+s = str(bt, "utf-8")
+s = StringIO(s)
 
-    print(
-        "Blob {} downloaded to {}.".format(
-            source_blob_name, destination_file_name
-        )
-    )
+df3 = pd.read_csv(s)
+df3 = df3.loc[:, ~df3.columns.str.contains('^Unnamed')]
+df3 = df3.apply(tuple, axis=1)
 
+dictionary = set(word.lower() for passage in df3 for word in word_tokenize(passage[0]))
+
+### create dictionary comparing new data to dictionary from model
 
 classifyFeatures = [({word: (word in word_tokenize(x[0])) for word in dictionary}) for x in classifyData]
 
-print(type(classifyFeatures))
-print(classifyFeatures)
-print(type(all_dfs))
-print(all_dfs)
+
+### read nlp model from pickle file in GCS
+
+### storage client and bucket already defined above
+#storage_client = storage.Client()
+#bucket = storage_client.bucket('your-gcs-bucket')
+
+blob = bucket.blob('dictionary/naiveBayesModel.p')
+pickle_in = blob.download_as_string()
+nlpModel = pickle.loads(pickle_in)
+
+### classify new data
+
+results = (nlpModel.classify_many(classifyFeatures))
+
+all_dfsResults = all_dfs
+
+### add classification as column "sentiment" to dataframe for upload to bigquery
+
+all_dfsResults["sentiment"] = results
+
+
+all_dfsResults.to_csv("all_dfsResults.csv", index = False, header = True)
+
+# convert startDate to string from timestamp
+
+all_dfsResults['startDate'] = all_dfsResults['startDate'].astype(str)
+all_dfsResults = pd.DataFrame(all_dfsResults)
+
+#all_dfsResults = all_dfsResults.to_json(orient='records', lines=True)
+
+### Convert data to parquet file
+
+all_dfsResults.to_parquet("parquetDat.parquet", engine='fastparquet', index=False)
+
+# notice the lack of header skipping and schema detection parameters
+client = bigquery.Client()
+table_id = 'nu-skin-corp.REPORTING.TEST_DIST_TOOLS_NLP'
+#table_ref = client.dataset("Reporting").table("TEST_DIST_TOOLS_NLP")
+job_config = bigquery.LoadJobConfig()
+job_config.source_format = bigquery.SourceFormat.PARQUET
+
+with open("parquetDat.parquet", "rb") as source_file:
+    job = client.load_table_from_file(
+        source_file,
+        table_id,
+        job_config=job_config
+    )
+
+print(all_dfsResults)
+print("Upload Complete")
+
+'''
+print("json")
+print(all_dfsResults)
+### convert json to ndjson
+all_dfsResults = [json.dumps(record) for record in all_dfsResults]
+#all_dfsResults = ndjson.dumps(all_dfsResults)
+print("ndjson")
+print(all_dfsResults)
+
+
+print("above all_dfsResults")
+'''
+#print(all_dfsResults.columns)
+
+### convert data to json for bigquery upload
+
+'''
+dictionary_variable = [
+    dict([
+        (colname, row[i])
+        for i,colname in enumerate(df.columns)
+    ])
+    for row in all_dfsResults.values
+]
+print(json.dumps(dictionary_variable))
+#
+'''
+
+'''
+#### upload data to bigquery
+
+import pandas as pd
+import numpy as np
+from google.cloud import bigquery
+import os, json
+
+### Converts schema dictionary to BigQuery's expected format for job_config.schema
+def format_schema(schema):
+    formatted_schema = []
+    for row in schema:
+        formatted_schema.append(bigquery.SchemaField(row['name'], row['type'], row['mode']))
+    return formatted_schema
+
+### Define schema as on BigQuery table, i.e. the fields id, first_name and last_name
+table_schema = {
+          'name': 'startDate',
+          'type': 'TIMESTAMP',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'responseID',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'userLanguage',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'browser',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'os',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'currUrl',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'response',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'question',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'sentiment',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }
+
+
+table_id = 'nu-skin-corp.REPORTING.TEST_DIST_TOOLS_NLP'
+
+client = bigquery.Client()
+
+job_config = bigquery.LoadJobConfig()
+job_config.source_format = bigquery.SourceFormat.NEWLINE_DELIMITED_JSON
+job_config.schema = format_schema(table_schema)
+job = client.load_table_from_json(dfUpload, table_id, job_config = job_config)
+
+print(job.result())
+'''
+
+'''
+
+dfUpload = all_dfsResults
+import ndjson
+print(validate(dfUpload, verbose = False))
+#print(dfUpload)
+print(dfUpload)
+
+# Construct a BigQuery client object.
+client = bigquery.Client()
+
+# TODO(developer): Set table_id to the ID of the table to create.
+# table_id = "your-project.your_dataset.your_table_name"
+table_id = "nu-skin-corp.REPORTING.TEST_DIST_TOOLS_NLP"
+
+job_config = bigquery.LoadJobConfig(
+
+schema = [
+{
+          'name': 'startDate',
+          'type': 'TIMESTAMP',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'responseID',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'userLanguage',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'browser',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'os',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'currUrl',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'response',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'question',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }, {
+          'name': 'sentiment',
+          'type': 'STRING',
+          'mode': 'NULLABLE'
+          }
+],
+
+    #schema=[
+     #   bigquery.SchemaField("startDate", "TIMESTAMP"),
+      #  bigquery.SchemaField("responseID", "STRING"),
+       # bigquery.SchemaField("userLanguage", "STRING"),
+        #bigquery.SchemaField("browser", "STRING"),
+        #bigquery.SchemaField("os", "STRING"),
+        #bigquery.SchemaField("currUrl", "STRING"),
+        #bigquery.SchemaField("response", "STRING"),
+        #bigquery.SchemaField("question", "STRING"),
+        #bigquery.SchemaField("sentiment", "STRING"),
+    #],
+    source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
+)
+
+# Make an API request.
+
+load_job = client.load_table_from_json(dfUpload, table_id, job_config = job_config)
+
+from google.api_core.exceptions import BadRequest
+
+try:
+    load_job.result() # Waits for the job to complete.
+    destination_table = client.get_table(table_id)
+    print("Loaded {} rows.".format(destination_table.num_rows))
+except BadRequest as e:
+    for e in load_job.errors:
+        print('ERROR: {}'.format(e['message']))
+        
+        '''
+'''
+load_job.result()  # Waits for the job to complete.
+
+print(load_job.errors())
+
+destination_table = client.get_table(table_id)
+print("Loaded {} rows.".format(destination_table.num_rows))
+
+'''
 
 
 
+'''
+client = bigquery.Client()
 
+# TODO(developer): Set table_id to the ID of the table to create.
+# table_id = "your-project.your_dataset.your_table_name"
+table_id = "nu-skin-corp.REPORTING.TEST_DIST_TOOLS_NLP"
 
-all_dfs.to_csv("dataDf.csv")
+job_config = bigquery.LoadJobConfig(
+    source_format=bigquery.SourceFormat.CSV, skip_leading_rows=1, autodetect=True,
+)
 
+with open(file_path, "rb") as source_file:
+    job = client.load_table_from_file(source_file, table_id, job_config=job_config)
 
-#dataDf.to_csv("dataDf.csv")
-#print("dataframe below")
-#print(dataDf)
+job.result()  # Waits for the job to complete.
 
+table = client.get_table(table_id)  # Make an API request.
+print(
+    "Loaded {} rows and {} columns to {}".format(
+        table.num_rows, len(table.schema), table_id
+    )
+)
 
+'''

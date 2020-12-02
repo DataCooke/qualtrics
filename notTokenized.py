@@ -360,6 +360,7 @@ dictExport = pd.DataFrame(dictionary)
 dictExport.to_csv("dictExport.csv")
 print("dictionary here")
 print(dictionary)
+print(type(dictionary))
 t = [({word: (word in word_tokenize(x[0])) for word in dictionary}, x[1]) for x in train]
 
 tTest = [({word: (word in word_tokenize(x[0])) for word in dictionary}, x[1]) for x in test]
