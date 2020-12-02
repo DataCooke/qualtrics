@@ -1,36 +1,17 @@
 #!/usr/bin/env python3.7
-import fastparquet
-import json
-import ndjson
-import http.client
-import zipfile
-import os
-import io
-import base64
-import json
-import requests
-from pandas.io.json import json_normalize
-import pandas as pd
-import chardet
 
 import http.client
+import http.client
 import zipfile
 import os
 import io
 import base64
 import json
 import requests
-from pandas.io.json import json_normalize
-import numpy as np
 import pandas as pd
-import chardet
 import nltk
-from nltk.probability import FreqDist
 from nltk.corpus import stopwords
-from nltk.stem.porter import PorterStemmer
 from nltk.stem import WordNetLemmatizer
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
-from nltk import sent_tokenize
 from nltk import word_tokenize
 from google.cloud import bigquery
 import pickle
@@ -156,6 +137,7 @@ print(" ")
 ''' output will include duplicate values for ALL columns where a user answered multiple questions. 
 Each row represents one response where a single user could answer multiple questions and thus multiple responses.
 Therefore, when counting the number of Chrome browsers, you need to sum unique responses where browser is chrome'''
+
 dataDf.columns = dataDf.iloc[1]
 dataDf = dataDf.drop([0,1])
 dataDf = dataDf.reset_index(drop=True)
@@ -276,7 +258,6 @@ all_dfsResults.to_csv("all_dfsResults.csv", index = False, header = True)
 all_dfsResults['startDate'] = all_dfsResults['startDate'].astype(str)
 all_dfsResults = pd.DataFrame(all_dfsResults)
 
-#all_dfsResults = all_dfsResults.to_json(orient='records', lines=True)
 
 ### Convert data to parquet file
 
@@ -285,7 +266,6 @@ all_dfsResults.to_parquet("parquetDat.parquet", engine='fastparquet', index=Fals
 # notice the lack of header skipping and schema detection parameters
 client = bigquery.Client()
 table_id = 'nu-skin-corp.REPORTING.TEST_DIST_TOOLS_NLP'
-#table_ref = client.dataset("Reporting").table("TEST_DIST_TOOLS_NLP")
 job_config = bigquery.LoadJobConfig()
 job_config.source_format = bigquery.SourceFormat.PARQUET
 
@@ -298,221 +278,3 @@ with open("parquetDat.parquet", "rb") as source_file:
 
 print(all_dfsResults)
 print("Upload Complete")
-
-'''
-print("json")
-print(all_dfsResults)
-### convert json to ndjson
-all_dfsResults = [json.dumps(record) for record in all_dfsResults]
-#all_dfsResults = ndjson.dumps(all_dfsResults)
-print("ndjson")
-print(all_dfsResults)
-
-
-print("above all_dfsResults")
-'''
-#print(all_dfsResults.columns)
-
-### convert data to json for bigquery upload
-
-'''
-dictionary_variable = [
-    dict([
-        (colname, row[i])
-        for i,colname in enumerate(df.columns)
-    ])
-    for row in all_dfsResults.values
-]
-print(json.dumps(dictionary_variable))
-#
-'''
-
-'''
-#### upload data to bigquery
-
-import pandas as pd
-import numpy as np
-from google.cloud import bigquery
-import os, json
-
-### Converts schema dictionary to BigQuery's expected format for job_config.schema
-def format_schema(schema):
-    formatted_schema = []
-    for row in schema:
-        formatted_schema.append(bigquery.SchemaField(row['name'], row['type'], row['mode']))
-    return formatted_schema
-
-### Define schema as on BigQuery table, i.e. the fields id, first_name and last_name
-table_schema = {
-          'name': 'startDate',
-          'type': 'TIMESTAMP',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'responseID',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'userLanguage',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'browser',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'os',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'currUrl',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'response',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'question',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'sentiment',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }
-
-
-table_id = 'nu-skin-corp.REPORTING.TEST_DIST_TOOLS_NLP'
-
-client = bigquery.Client()
-
-job_config = bigquery.LoadJobConfig()
-job_config.source_format = bigquery.SourceFormat.NEWLINE_DELIMITED_JSON
-job_config.schema = format_schema(table_schema)
-job = client.load_table_from_json(dfUpload, table_id, job_config = job_config)
-
-print(job.result())
-'''
-
-'''
-
-dfUpload = all_dfsResults
-import ndjson
-print(validate(dfUpload, verbose = False))
-#print(dfUpload)
-print(dfUpload)
-
-# Construct a BigQuery client object.
-client = bigquery.Client()
-
-# TODO(developer): Set table_id to the ID of the table to create.
-# table_id = "your-project.your_dataset.your_table_name"
-table_id = "nu-skin-corp.REPORTING.TEST_DIST_TOOLS_NLP"
-
-job_config = bigquery.LoadJobConfig(
-
-schema = [
-{
-          'name': 'startDate',
-          'type': 'TIMESTAMP',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'responseID',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'userLanguage',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'browser',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'os',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'currUrl',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'response',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'question',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }, {
-          'name': 'sentiment',
-          'type': 'STRING',
-          'mode': 'NULLABLE'
-          }
-],
-
-    #schema=[
-     #   bigquery.SchemaField("startDate", "TIMESTAMP"),
-      #  bigquery.SchemaField("responseID", "STRING"),
-       # bigquery.SchemaField("userLanguage", "STRING"),
-        #bigquery.SchemaField("browser", "STRING"),
-        #bigquery.SchemaField("os", "STRING"),
-        #bigquery.SchemaField("currUrl", "STRING"),
-        #bigquery.SchemaField("response", "STRING"),
-        #bigquery.SchemaField("question", "STRING"),
-        #bigquery.SchemaField("sentiment", "STRING"),
-    #],
-    source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
-)
-
-# Make an API request.
-
-load_job = client.load_table_from_json(dfUpload, table_id, job_config = job_config)
-
-from google.api_core.exceptions import BadRequest
-
-try:
-    load_job.result() # Waits for the job to complete.
-    destination_table = client.get_table(table_id)
-    print("Loaded {} rows.".format(destination_table.num_rows))
-except BadRequest as e:
-    for e in load_job.errors:
-        print('ERROR: {}'.format(e['message']))
-        
-        '''
-'''
-load_job.result()  # Waits for the job to complete.
-
-print(load_job.errors())
-
-destination_table = client.get_table(table_id)
-print("Loaded {} rows.".format(destination_table.num_rows))
-
-'''
-
-
-
-'''
-client = bigquery.Client()
-
-# TODO(developer): Set table_id to the ID of the table to create.
-# table_id = "your-project.your_dataset.your_table_name"
-table_id = "nu-skin-corp.REPORTING.TEST_DIST_TOOLS_NLP"
-
-job_config = bigquery.LoadJobConfig(
-    source_format=bigquery.SourceFormat.CSV, skip_leading_rows=1, autodetect=True,
-)
-
-with open(file_path, "rb") as source_file:
-    job = client.load_table_from_file(source_file, table_id, job_config=job_config)
-
-job.result()  # Waits for the job to complete.
-
-table = client.get_table(table_id)  # Make an API request.
-print(
-    "Loaded {} rows and {} columns to {}".format(
-        table.num_rows, len(table.schema), table_id
-    )
-)
-
-'''

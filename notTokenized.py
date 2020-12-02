@@ -59,8 +59,6 @@ train = [("Great place to be when you are in Bangalore.", "pos"),
   ("The place is not easy to locate", "neg"),
   ("Mushroom fried rice was spicy", "pos"),
 ]
-
-
 dictionary = set(word.lower() for passage in train for word in word_tokenize(passage[0]))
 #print("dictionary")
 #print(dictionary)
@@ -70,20 +68,16 @@ dictionary = set(word.lower() for passage in train for word in word_tokenize(pas
 t = [({word: (word in word_tokenize(x[0])) for word in dictionary}, x[1]) for x in train]
 #print("t")
 #print(t)
-
 # Step 4 – the classifier is trained with sample data
 classifier = nltk.NaiveBayesClassifier.train(t)
-
 test_data = "Manchurian was hot and spicy"
 test_data_features = {word.lower(): (word in word_tokenize(test_data.lower())) for word in dictionary}
-
 #print(classifier.classify(test_data_features))
 '''
 ### end stuff for testing
 
 ## original header processing
 '''
-
 use_cols = [
             0, 1, 4, 5, 6
             , 7, 8, 15, 16, 17
@@ -98,10 +92,8 @@ use_cols = [
             , 62, 63, 64, 67, 68
             , 69, 70, 71, 72, 73
         ]
-
 df=pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/MyQualtricsDownload/NuSkin.com Feedback Tab v5.1.csv', usecols=use_cols)
 print(df.columns)
-
 df.columns = [
     'startDate','endDate','progress','duration','finished'
     ,'recordedDT','responseId','distChannel','language','q28'
@@ -115,14 +107,12 @@ df.columns = [
     ,'q30Translated','q30TranslatedTopicSentLabel','q30TranslatedTopicSentScore','q30TrasnlatedSentPolarity','q30TranslatedTopics'
     ,'q30TranslatedSentScore','q30TranslatedParentTopic','q30TranslatedSent','q3SentScore','q3Sent'
     ,'q3TopicSentLabel','q3TopicSentScore','q3Topic','q3Translated','q83Translated']
-
 #remove original headers and leave only headers we like. original headers are saved ad dfOrigHeaders
 dfOrigHeaders = df[0:2]
 df = df.drop([0,1,2])
 #print(df.head())
 print("head 44")
 print(df.iloc[:,[59]])
-
 for col in df.columns:
     print(col)
 #print('Complete')
@@ -130,21 +120,16 @@ df = df.applymap(str)
 #df = df.to_string()
 #print(type(df))
 #print(dir(df))
-
 #dfTokenize = df[['q29Translated','q3Translated', 'q83Translated']]
 #print(dfTokenize)
-
 df = df.replace('nan', '')
-
 df["q29TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[44]), axis=1)
 df["q3TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[58]), axis=1)
 df["q83TextToken"] = df.apply(lambda x: nltk.word_tokenize(x[59]), axis=1)
 print(df.iloc[:,[44,58,59]])
-
 q29Text = ''.join(df.iloc[:,44].tolist())
 q3Text = ''.join(df.iloc[:,58].tolist())
 q83Text = ''.join(df.iloc[:,59].tolist())
-
 '''
 ### end original header processing
 
@@ -235,33 +220,25 @@ for row in q29Sent.itertuples():
         sentences.append((row[1], row[2], sentence))
 q29Sent_DF = pd.DataFrame(sentences, columns=['start_date', 'responseID', 'sentence'])
 q29Sent_DF["question"] = "q29"
-
-
-
 #processing sentence for q3
 q3Sent = df1.iloc[:, [0,1,3]]
-
 sentences = []
 for row in q3Sent.itertuples():
     for sentence in sent_tokenize(row[3]):
         sentences.append((row[1], row[2], sentence))
 q3Sent_DF = pd.DataFrame(sentences, columns=['start_date', 'responseID', 'sentence'])
 q3Sent_DF["question"] = "q3"
-
 #processing sentence for q83
 q83Sent = df1.iloc[:, [0,1,4]]
-
 sentences = []
 for row in q83Sent.itertuples():
     for sentence in sent_tokenize(row[3]):
         sentences.append((row[1], row[2], sentence))
 q83Sent_DF = pd.DataFrame(sentences, columns=['start_date', 'responseID', 'sentence'])
 q83Sent_DF["question"] = "q83"
-
 print("Q29 sent DF")
 print(q29Sent_DF)
 q29Sent_DF.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/q29Sent_df.csv')
-
 '''
 
 # stack all dataframes on one another
@@ -580,29 +557,22 @@ df.to_csv("dfOutput.csv", index = False, header = True)
 
 
 '''
-
 #upload data to bigquery
 # Construct a BigQuery client object.
 client = bigquery.Client()
-
 # TODO(developer): Set table_id to the ID of the table to create.
 # table_id = "your-project.your_dataset.your_table_name"
 table_id = "nu-skin-corp.REPORTING.DIST_TOOLS"
-
 job_config = bigquery.LoadJobConfig(
     source_format=bigquery.SourceFormat.CSV, skip_leading_rows=1, autodetect=True,
 )
-
 with open(file_path, "rb") as source_file:
     job = client.load_table_from_file(source_file, table_id, job_config=job_config)
-
 job.result()  # Waits for the job to complete.
-
 table = client.get_table(table_id)  # Make an API request.
 print(
     "Loaded {} rows and {} columns to {}".format(
         table.num_rows, len(table.schema), table_id
     )
 )
-
 '''
