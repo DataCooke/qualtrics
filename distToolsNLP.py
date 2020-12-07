@@ -1,7 +1,6 @@
 #!/usr/bin/env python3.7
 
 import http.client
-import http.client
 import zipfile
 import os
 import io
