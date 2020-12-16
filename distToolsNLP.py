@@ -329,7 +329,7 @@ def all():
     ### Convert data to parquet file
     ### parquet file is used because big query can ingest the data much more easily by autodetecting data types and such
 
-    all_dfsResults.to_parquet("parquetDat.parquet", compression='gzip', engine='fastparquet', index=False)
+    all_dfsResults.to_parquet("/tmp/parquetDat.parquet", compression='gzip', engine='fastparquet', index=False)
 
     # notice the lack of header skipping and schema detection parameters - due to parquet file magic
     client = bigquery.Client()
@@ -337,7 +337,7 @@ def all():
     job_config = bigquery.LoadJobConfig()
     job_config.source_format = bigquery.SourceFormat.PARQUET
 
-    with open("parquetDat.parquet", "rb") as source_file:
+    with open("/tmp/parquetDat.parquet", "rb") as source_file:
         job = client.load_table_from_file(
             source_file,
             table_id,
