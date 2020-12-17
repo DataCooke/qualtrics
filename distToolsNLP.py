@@ -5,9 +5,8 @@
 ### AND get rid of indent for ALL of the code that was wrapped in "all"
 ### You will also need to edit the filepath where the parquet file is dumped (around line 332).
 ### The "/tmp" portion should be removed when run locally from the to_parquet and "open" function.
-### nltk.downloads are only needed when runnin in cloud or on first run when run locally
+### nltk.downloads are only needed when running in cloud or on first run when run locally
 
-import http.client
 import http.client
 import zipfile
 import io
@@ -42,9 +41,9 @@ endDate = last_day.strftime("%Y-%m-%d")
 
 ### download resources needed for use in cloud function. This is only needed when running on console on first run locally
 
-nltk.download('stopwords')
-nltk.download('wordnet')
-nltk.download('punkt')
+#nltk.download('stopwords')
+#nltk.download('wordnet')
+#nltk.download('punkt')
 
 
 
@@ -113,6 +112,7 @@ def all():
     token = json.loads(data.decode("utf-8"))
     token = token["access_token"]
 
+
     ### final qualtrics key has been pulled. Moving on to pulling data.
 
     ### Below only needed if you want to see what user and user id is used for qualtrics data
@@ -139,6 +139,9 @@ def all():
     # creating parameters for qualtrics data pull.
 
     bearerToken = token # call the function defined in the previous code example
+
+    ### "/surverys/********/export-responses/"  - the **** portion of the url is the qualtrics survey ID
+
     baseUrl = "https://co1.qualtrics.com/API/v3/surveys/SV_8wbVPpmD5l5ItCt/export-responses/"
     headers = {
         "authorization": "bearer " + bearerToken,
