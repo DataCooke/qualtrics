@@ -6,15 +6,39 @@ import json
 import requests
 import pandas as pd
 import numpy as np
-import nltk
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-from nltk import word_tokenize
-from google.cloud import bigquery
-import pickle
 import datetime
 from datetime import date
 from dateutil.relativedelta import relativedelta
+
+
+def download_blob(bucket_name, source_blob_name, destination_file_name):
+    """Downloads a blob from the bucket."""
+    # bucket_name = "your-bucket-name"
+    # source_blob_name = "storage-object-name"
+    # destination_file_name = "local/path/to/file"
+
+    storage_client = storage.Client()
+
+    bucket = storage_client.bucket(bucket_name)
+
+    # Construct a client side representation of a blob.
+    # Note `Bucket.blob` differs from `Bucket.get_blob` as it doesn't retrieve
+    # any content from Google Cloud Storage. As we don't need additional data,
+    # using `Bucket.blob` is preferred here.
+    blob = bucket.blob(source_blob_name)
+    blob.download_to_filename(destination_file_name)
+
+    print(
+        "Blob {} downloaded to {}.".format(
+            source_blob_name, destination_file_name
+        )
+    )
+
+bucket_name = "test_feedback_nlp"
+source_blob_name = "newLabeledData"
+destination_file_name = "/tmp/newLabeledData.csv"
+
+training = pd.read_csv('/tmp/newLabeledData.csv')
 
 ### Use below if you need to Build startDate and endDate variables beginning on the first day of the previous month and ending on the last day of the previous month
 '''
@@ -32,7 +56,7 @@ endDate = last_day.strftime("%Y-%m-%d")'''
 
 ### build start date based upon last date from most recent training data set and end date is yesterday.
 
-training = pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/labeledDat.csv')
+#training = pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/newLabeledDat.csv')
 training['startDate'] = pd.to_datetime(training['startDate'])
 startDate = training['startDate'].max().date() + datetime.timedelta(days=1)
 startDate = str(startDate)
@@ -256,11 +280,41 @@ all_dfs = all_dfs.loc[:, ~all_dfs.columns.str.contains('^Unnamed')]
 all_dfs = all_dfs.reset_index(drop=True)
 all_dfs['response'].replace('', np.nan, inplace=True)
 all_dfs.dropna(subset=['response'], inplace=True)
-all_dfs.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/partLabeled.csv')
+all_dfs.to_csv('/tmp/partLabeled.csv')
+
+def upload_blob(bucket_name, source_file_name, destination_blob_name):
+    """Uploads a file to the bucket."""
+    #client = storage.Client()
+    #bucket = client.get_bucket("test_feedback_nlp")
+    #blob = bucket.blob(f"dictionary/naiveBayesModel.p")
+    # bucket_name = "your-bucket-name"
+    # source_file_name = "local/path/to/file"
+    # destination_blob_name = "storage-object-name"
+
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+
+    blob.upload_from_filename(source_file_name)
+
+    print(
+        "File {} uploaded to {}.".format(
+            source_file_name, destination_blob_name
+        )
+    )
+
+bucket_name = "test_feedback_nlp"
+source_file_name = "/tmp/partLabeled.csv"
+destination_blob_name = "dictionary/partLabeled.csv"
+
+upload_blob(bucket_name, source_file_name, destination_blob_name)
+
+
+
 
 ### export new training data ready for labeling
 
-all_dfs.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/partLabeled.csv')
+#all_dfs.to_csv(r'C:/Users/jcooke/PycharmProjects/qualtrics/partLabeled.csv')
 
 print("New data ready for labeling: partLabeled.csv")
 # create training set

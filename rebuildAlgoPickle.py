@@ -4,11 +4,9 @@ import pickle
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk import word_tokenize
-
+from google.cloud import storage
 
 training = pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/newLabeledDat.csv')
-
-
 
 training = training.loc[:, ~training.columns.str.contains('^Unnamed')]
 print(training)
@@ -75,3 +73,31 @@ print("Naive Bayes Algo Accuracy Percent:", (nltk.classify.accuracy(classifier, 
 
 saved_model = pickle.dumps(classifier)
 pickle.dump(classifier, open("naiveBayesModel.p", "wb"))
+
+
+def upload_blob(bucket_name, source_file_name, destination_blob_name):
+    """Uploads a file to the bucket."""
+    #client = storage.Client()
+    #bucket = client.get_bucket("test_feedback_nlp")
+    #blob = bucket.blob(f"dictionary/naiveBayesModel.p")
+    # bucket_name = "your-bucket-name"
+    # source_file_name = "local/path/to/file"
+    # destination_blob_name = "storage-object-name"
+
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+
+    blob.upload_from_filename(source_file_name)
+
+    print(
+        "File {} uploaded to {}.".format(
+            source_file_name, destination_blob_name
+        )
+    )
+
+bucket_name = "test_feedback_nlp"
+source_file_name = "C:/Users/jcooke/PycharmProjects/qualtrics/naiveBayesModel.p"
+destination_blob_name = "dictionary/naiveBayesModel.p"
+
+upload_blob(bucket_name, source_file_name, destination_blob_name)
