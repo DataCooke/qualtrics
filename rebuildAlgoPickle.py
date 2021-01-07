@@ -6,7 +6,35 @@ from nltk.stem import WordNetLemmatizer
 from nltk import word_tokenize
 from google.cloud import storage
 
-training = pd.read_csv('C:/Users/jcooke/PycharmProjects/qualtrics/newLabeledDat.csv')
+def download_blob(bucket_name, source_blob_name, destination_file_name):
+    """Downloads a blob from the bucket."""
+    # bucket_name = "your-bucket-name"
+    # source_blob_name = "storage-object-name"
+    # destination_file_name = "local/path/to/file"
+
+    storage_client = storage.Client()
+
+    bucket = storage_client.bucket(bucket_name)
+
+    # Construct a client side representation of a blob.
+    # Note `Bucket.blob` differs from `Bucket.get_blob` as it doesn't retrieve
+    # any content from Google Cloud Storage. As we don't need additional data,
+    # using `Bucket.blob` is preferred here.
+    blob = bucket.blob(source_blob_name)
+    blob.download_to_filename(destination_file_name)
+
+    print(
+        "Blob {} downloaded to {}.".format(
+            source_blob_name, destination_file_name
+        )
+    )
+
+bucket_name = "test_feedback_nlp"
+source_blob_name = "newLabeledData"
+destination_file_name = "/tmp/newLabeledData.csv"
+
+training = pd.read_csv('/tmp/newLabeledData.csv')
+
 
 training = training.loc[:, ~training.columns.str.contains('^Unnamed')]
 print(training)
@@ -72,8 +100,7 @@ classifier = nltk.NaiveBayesClassifier.train(t)
 print("Naive Bayes Algo Accuracy Percent:", (nltk.classify.accuracy(classifier, tTest)) * 100)
 
 saved_model = pickle.dumps(classifier)
-pickle.dump(classifier, open("naiveBayesModel.p", "wb"))
-
+pickle.dump(classifier, open("/tmp/naiveBayesModel.p", "wb"))
 
 def upload_blob(bucket_name, source_file_name, destination_blob_name):
     """Uploads a file to the bucket."""
@@ -96,8 +123,11 @@ def upload_blob(bucket_name, source_file_name, destination_blob_name):
         )
     )
 
+### upload new NLP algo as pickle file to Google Cloud Storage
+
 bucket_name = "test_feedback_nlp"
-source_file_name = "C:/Users/jcooke/PycharmProjects/qualtrics/naiveBayesModel.p"
+source_file_name = "/tmp/naiveBayesModel.p"
 destination_blob_name = "dictionary/naiveBayesModel.p"
 
 upload_blob(bucket_name, source_file_name, destination_blob_name)
+
